@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MedVision AI — Chest X-Ray Diagnosis System</title>
+<style>
+:root {
+  --bg:#0d1117; --s1:#161b22; --s2:#21262d; --s3:#2d333b;
+  --border:#30363d; --border2:#444c56;
+  --text:#e6edf3; --muted:#8b949e; --muted2:#6e7681;
+  --blue:#2f81f7; --blue-bg:rgba(47,129,247,.12); --blue-b:rgba(47,129,247,.3);
+  --green:#3fb950; --green-bg:rgba(63,185,80,.12);
+  --yellow:#d29922; --yellow-bg:rgba(210,153,34,.12);
+  --red:#f85149; --red-bg:rgba(248,81,73,.12);
+  --purple:#bc8cff;
+  --r:8px; --rl:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--s1)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* ─── Shell ─── */
+.shell{display:grid;grid-template-columns:250px 1fr;min-height:100vh}
+.sidebar{background:var(--s1);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:16px 0}
+.logo{padding:0 18px 18px;border-bottom:1px solid var(--border);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.logo-icon{width:34px;height:34px;background:var(--blue);border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.logo-name{font-size:14px;font-weight:600}
+.logo-ver{font-size:10px;color:var(--muted)}
+.nav{flex:1;padding:0 10px}
+.nav-sec{padding:10px 10px 4px;font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:.08em}
+.nav-btn{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r);cursor:pointer;color:var(--muted);font-size:13px;transition:.15s;background:none;border:none;width:100%;text-align:left;margin-bottom:1px}
+.nav-btn:hover{background:var(--s2);color:var(--text)}
+.nav-btn.active{background:var(--blue-bg);color:var(--blue)}
+.nav-icon{font-size:15px;width:18px;text-align:center;flex-shrink:0}
+.sidebar-footer{padding:14px 18px 0;border-top:1px solid var(--border);margin-top:12px}
+.svc-row{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);margin-bottom:4px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
+.dot.red{background:var(--red)}
+.dot.yellow{background:var(--yellow)}
+
+/* ─── Main ─── */
+.main{display:flex;flex-direction:column;overflow:hidden}
+.topbar{background:var(--s1);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.tb-title{font-size:15px;font-weight:600}
+.tb-sub{font-size:11px;color:var(--muted);margin-top:1px}
+.badges{display:flex;gap:7px;align-items:center}
+.badge{padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500}
+.b-blue{background:var(--blue-bg);color:var(--blue)}
+.b-green{background:var(--green-bg);color:var(--green)}
+.b-yellow{background:var(--yellow-bg);color:var(--yellow)}
+.b-red{background:var(--red-bg);color:var(--red)}
+
+.content{flex:1;padding:22px;overflow-y:auto}
+.panel{display:none}.panel.active{display:block;animation:fi .2s ease}
+@keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* ─── Grid ─── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+
+/* ─── Cards ─── */
+.card{background:var(--s1);border:1px solid var(--border);border-radius:var(--rl);padding:18px}
+.card-sm{padding:13px 15px}
+.ct{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:13px;font-weight:500}
+.mnum{font-size:26px;font-weight:600;margin:3px 0}
+.mlbl{font-size:11px;color:var(--muted)}
+.mdelta{font-size:11px;color:var(--green);margin-top:2px}
+
+/* ─── Upload ─── */
+.upzone{border:2px dashed var(--border2);border-radius:var(--rl);padding:40px 20px;text-align:center;cursor:pointer;transition:.2s;background:var(--s2)}
+.upzone:hover,.upzone.drag{border-color:var(--blue);background:var(--blue-bg)}
+.upzone.ok{border-color:var(--green);background:var(--green-bg);border-style:solid}
+.up-icon{width:52px;height:52px;border-radius:50%;background:var(--s3);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:24px}
+.up-title{font-size:14px;font-weight:500;margin-bottom:5px}
+.up-sub{font-size:12px;color:var(--muted)}
+.tags{display:flex;gap:7px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+.tag{background:var(--s3);border:1px solid var(--border);border-radius:4px;padding:2px 7px;font-size:10px;color:var(--muted);font-family:monospace}
+#imgPreview{width:100%;border-radius:var(--rl);max-height:260px;object-fit:contain;display:none;background:#000;margin-top:13px}
+
+/* ─── Inputs ─── */
+input[type=text],textarea,select{width:100%;padding:9px 11px;border-radius:var(--r);border:1px solid var(--border);background:var(--s2);color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:border-color .15s}
+input[type=text]:focus,textarea:focus{border-color:var(--blue)}
+textarea{min-height:72px;resize:vertical}
+label{font-size:11px;color:var(--muted);display:block;margin-bottom:5px}
+
+/* ─── Buttons ─── */
+.btn{padding:9px 18px;border-radius:var(--r);font-size:13px;font-weight:500;cursor:pointer;transition:.15s;border:1px solid transparent;display:inline-flex;align-items:center;gap:7px}
+.btn-p{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-p:hover{opacity:.85}
+.btn-p:disabled{opacity:.4;cursor:not-allowed}
+.btn-s{background:var(--s2);color:var(--text);border-color:var(--border)}
+.btn-s:hover{border-color:var(--border2)}
+.btn-full{width:100%;justify-content:center}
+.btn-sm{padding:6px 12px;font-size:12px}
+
+/* ─── Loader ─── */
+.lbar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin:10px 0}
+.lfill{height:100%;background:var(--blue);border-radius:2px;transition:width .4s}
+.spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-row{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--muted);padding:8px 0}
+
+/* ─── Findings ─── */
+.finding-row{display:flex;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)}
+.finding-row:last-child{border-bottom:none}
+.f-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-right:8px}
+.f-label{flex:1}
+.f-name{font-size:13px;font-weight:500}
+.f-sub{font-size:11px;color:var(--muted);margin-top:1px}
+.conf-wrap{display:flex;align-items:center;gap:9px}
+.conf-bar{width:90px;height:5px;border-radius:3px;background:var(--border);overflow:hidden;flex-shrink:0}
+.conf-fill{height:100%;border-radius:3px}
+.conf-pct{font-size:12px;font-weight:500;min-width:36px;text-align:right}
+
+/* ─── Report sections ─── */
+.rsec{border-left:3px solid var(--blue);padding:11px 14px;background:var(--s2);border-radius:0 var(--r) var(--r) 0;margin-bottom:10px}
+.rsec-title{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;font-weight:500}
+.rsec-body{font-size:13px;color:var(--text);line-height:1.7;white-space:pre-wrap}
+
+/* ─── Chat ─── */
+.msgs{display:flex;flex-direction:column;gap:10px;max-height:300px;overflow-y:auto;margin-bottom:11px;padding-right:4px}
+.msg{max-width:86%;padding:9px 13px;border-radius:var(--rl);font-size:13px;line-height:1.6}
+.msg-u{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:3px}
+.msg-a{align-self:flex-start;background:var(--s2);border:1px solid var(--border);border-bottom-left-radius:3px}
+.msg-from{font-size:9px;opacity:.65;margin-bottom:3px;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.chat-row{display:flex;gap:7px}
+.chat-in{flex:1;padding:8px 11px;border-radius:var(--r);border:1px solid var(--border);background:var(--s2);color:var(--text);font-size:13px;outline:none}
+.chat-in:focus{border-color:var(--blue)}
+.chat-send{padding:8px 14px;border-radius:var(--r);background:var(--blue);color:#fff;border:none;font-size:13px;cursor:pointer}
+
+/* ─── Table ─── */
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:7px 10px;background:var(--s2);color:var(--muted);font-weight:500;font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+td{padding:9px 10px;border-top:1px solid var(--border)}
+tr:hover td{background:var(--s2)}
+
+/* ─── Alert ─── */
+.alert{padding:9px 13px;border-radius:var(--r);font-size:12px;margin-bottom:12px}
+.alert-info{background:var(--blue-bg);border:1px solid var(--blue-b);color:#8ab4f8}
+.alert-warn{background:var(--yellow-bg);border:1px solid rgba(210,153,34,.3);color:var(--yellow)}
+.alert-ok{background:var(--green-bg);border:1px solid rgba(63,185,80,.3);color:var(--green)}
+
+/* ─── Steps ─── */
+.step{display:flex;gap:10px;margin-bottom:10px;align-items:flex-start}
+.step-n{width:22px;height:22px;border-radius:50%;background:var(--blue-bg);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0;margin-top:2px}
+.step-title{font-size:13px;font-weight:500}
+.step-desc{font-size:11px;color:var(--muted);margin-top:1px;line-height:1.5}
+
+/* ─── Code ─── */
+pre{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:13px;font-size:11px;overflow-x:auto;color:#79c0ff;font-family:'Fira Code',monospace;line-height:1.6}
+
+/* ─── Disclaimer ─── */
+.disc{background:var(--yellow-bg);border:1px solid rgba(210,153,34,.35);border-radius:var(--r);padding:9px 13px;font-size:11px;color:var(--yellow);margin-bottom:18px}
+
+/* ─── Range ─── */
+input[type=range]{width:100%;accent-color:var(--blue)}
+
+@media(max-width:700px){.shell{grid-template-columns:1fr}.sidebar{display:none}.g2,.g3,.g4{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ─── Sidebar ─────────────────────────────────────────────────────────────── -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-icon">🔬</div>
+    <div>
+      <div class="logo-name">MedVision AI</div>
+      <div class="logo-ver">CheXpert · ResNet18 · 6 Labels</div>
+    </div>
+  </div>
+  <nav class="nav">
+    <div class="nav-sec">Diagnosis</div>
+    <button class="nav-btn active" onclick="go('upload',this)"><span class="nav-icon">📤</span>Image Analysis</button>
+    <button class="nav-btn" onclick="go('report',this)"><span class="nav-icon">📋</span>Diagnostic Report</button>
+    <button class="nav-btn" onclick="go('qa',this)"><span class="nav-icon">💬</span>Clinical Q&A</button>
+    <div class="nav-sec">Project</div>
+    <button class="nav-btn" onclick="go('dashboard',this)"><span class="nav-icon">📊</span>Dashboard</button>
+    <button class="nav-btn" onclick="go('pipeline',this)"><span class="nav-icon">🏗️</span>Architecture</button>
+    <button class="nav-btn" onclick="go('setup',this)"><span class="nav-icon">⚙️</span>Setup Guide</button>
+    <button class="nav-btn" onclick="go('viva',this)"><span class="nav-icon">🎓</span>Viva Guide</button>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="svc-row"><div class="dot red" id="svcDot"></div><span id="svcText">Checking service…</span></div>
+    <div style="font-size:10px;color:var(--muted2);margin-top:3px">Backend → Model Service</div>
+    <div style="font-size:10px;color:var(--muted2);margin-top:2px" id="labelInfo">Labels: —</div>
+  </div>
+</aside>
+
+<!-- ─── Main ─────────────────────────────────────────────────────────────────── -->
+<main class="main">
+  <div class="topbar">
+    <div><div class="tb-title" id="tb-title">Image Analysis</div><div class="tb-sub" id="tb-sub">Upload a chest X-ray for real AI diagnosis</div></div>
+    <div class="badges">
+      <span class="badge b-blue">CPU · ResNet18</span>
+      <span class="badge b-blue">CheXpert</span>
+      <span class="badge b-green" id="modelBadge">6 Labels</span>
+    </div>
+  </div>
+  <div class="content">
+    <div class="disc">
+      <strong>⚠️ Research & Educational Use Only</strong> — This system was trained on CheXpert (Stanford).
+      Output must NOT be used for clinical decisions. All findings require radiologist verification.
+    </div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- UPLOAD / ANALYSIS PANEL                                                  -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div id="panel-upload" class="panel active">
+  <div class="g2" style="gap:20px">
+
+    <!-- Left: controls -->
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card">
+        <div class="ct">Upload X-Ray Image</div>
+        <div class="upzone" id="dropzone"
+             onclick="document.getElementById('fileIn').click()"
+             ondragover="dragOn(event)" ondragleave="dragOff()"
+             ondrop="onDrop(event)">
+          <div class="up-icon" id="upIcon">📁</div>
+          <div class="up-title" id="upTitle">Drop image or click to browse</div>
+          <div class="up-sub" id="upSub">Real chest X-ray JPEG / PNG recommended</div>
+          <div class="tags"><span class="tag">JPEG</span><span class="tag">PNG</span><span class="tag">BMP</span></div>
+        </div>
+        <input type="file" id="fileIn" style="display:none" accept="image/*" onchange="onFile(event)">
+        <img id="imgPreview" alt="Preview">
+      </div>
+      <div class="card">
+        <div class="ct">Clinical Context (Optional)</div>
+        <label>Clinical question / query</label>
+        <input type="text" id="queryInput" placeholder='e.g. "Is there pneumonia?" or "What are the findings?"' style="margin-bottom:10px">
+        <label>Patient notes / indication</label>
+        <textarea id="notes" placeholder="Symptoms, history, clinical indication…" style="min-height:65px"></textarea>
+      </div>
+      <button class="btn btn-p btn-full" id="analyzeBtn" onclick="runAnalysis()" disabled>🔬 Analyse with AI</button>
+      <button class="btn btn-s btn-full" onclick="clearAll()">Clear</button>
+    </div>
+
+    <!-- Right: results -->
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div id="loadCard" class="card" style="display:none">
+        <div class="ct">Processing Pipeline</div>
+        <div id="loadSteps"></div>
+        <div class="lbar"><div class="lfill" id="lfill" style="width:0%"></div></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px" id="loadNote">Inference running on CPU…</div>
+      </div>
+      <div id="resCard" class="card" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:13px">
+          <div class="ct" style="margin:0">Disease Classification</div>
+          <span class="badge" id="resBadge">—</span>
+        </div>
+        <div id="findingList"></div>
+        <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-size:10px;color:var(--muted)" id="metaRow"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- REPORT PANEL                                                              -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div id="panel-report" class="panel">
+  <div class="alert alert-info" style="margin-bottom:14px">Run Image Analysis first, then view the full structured report here.</div>
+  <div class="g2" style="gap:16px">
+    <div>
+      <div class="rsec"><div class="rsec-title">Clinical Indication</div><div class="rsec-body" id="rep-ind">—</div></div>
+      <div class="rsec"><div class="rsec-title">Technique</div><div class="rsec-body" id="rep-tech">—</div></div>
+      <div class="rsec"><div class="rsec-title">Findings</div><div class="rsec-body" id="rep-find">Run analysis to populate.</div></div>
+      <div class="rsec"><div class="rsec-title">Impression</div><div class="rsec-body" id="rep-imp">—</div></div>
+      <div class="rsec"><div class="rsec-title">Recommendations</div><div class="rsec-body" id="rep-rec">—</div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="card">
+        <div class="ct">ICD-10 Codes</div>
+        <div id="icdCodes" style="font-size:13px;color:var(--muted)">Run analysis to see codes.</div>
+      </div>
+      <div class="card">
+        <div class="ct">Raw Report Text</div>
+        <pre id="rawReport" style="font-size:10px;max-height:280px;overflow-y:auto">Run analysis to generate.</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- Q&A PANEL                                                                 -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div id="panel-qa" class="panel">
+  <div class="g2" style="gap:20px">
+    <div class="card">
+      <div class="ct">Clinical Q&A</div>
+      <div class="alert alert-info" style="margin-bottom:12px">Upload and analyse an image first, then ask clinical questions.</div>
+      <div style="margin-bottom:11px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:7px">Quick questions:</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px" id="quickQs"></div>
+      </div>
+      <div class="msgs" id="chatMsgs">
+        <div class="msg msg-a"><div class="msg-from">MedVision AI</div>Upload and analyse a chest X-ray, then ask me clinical questions. I can answer about specific conditions, severity, recommendations, and more.</div>
+      </div>
+      <div class="chat-row">
+        <input type="text" class="chat-in" id="chatIn" placeholder="Ask a clinical question…" onkeydown="if(event.key==='Enter')sendChat()">
+        <button class="chat-send" onclick="sendChat()">Send</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ct">Q&A History</div>
+      <div id="qaHist" style="font-size:13px;color:var(--muted)">No questions yet.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- DASHBOARD                                                                 -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div id="panel-dashboard" class="panel">
+  <div class="g4" style="margin-bottom:16px">
+    <div class="card card-sm"><div class="mlbl">Dataset</div><div class="mnum">CheXpert</div><div class="mdelta">Stanford ML Group</div></div>
+    <div class="card card-sm"><div class="mlbl">Training Images</div><div class="mnum">223K+</div><div class="mdelta">frontal PA/AP views</div></div>
+    <div class="card card-sm"><div class="mlbl">Model</div><div class="mnum">ResNet18</div><div class="mdelta">ImageNet pretrained</div></div>
+    <div class="card card-sm"><div class="mlbl">Labels Used</div><div class="mnum">6 / 14</div><div class="mdelta">CPU-friendly subset</div></div>
+  </div>
+  <div class="g2" style="margin-bottom:16px">
+    <div class="card">
+      <div class="ct">Expected AUC (CheXpert validation)</div>
+      <div id="aucBars"></div>
+      <div style="font-size:10px;color:var(--muted);margin-top:10px">
+        Target: AUC ≥ 0.80 = Good · ≥ 0.70 = Fair · &lt;0.70 = Needs more data/epochs
+      </div>
+    </div>
+    <div class="card">
+      <div class="ct">CheXpert Label Statistics</div>
+      <table>
+        <tr><th>Condition</th><th>Prevalence</th><th>Target AUC</th></tr>
+        <tbody id="statTable"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ct">Uncertainty Label Strategies (CheXpert -1 labels)</div>
+    <table>
+      <tr><th>Strategy</th><th>Maps -1 to</th><th>Effect</th><th>Recommended for</th></tr>
+      <tr><td><strong>U-Zeros</strong> (default)</td><td>0.0 (negative)</td><td>Conservative, safe</td><td>Most labels</td></tr>
+      <tr><td><strong>U-Ones</strong></td><td>1.0 (positive)</td><td>Aggressive, may improve AUC</td><td>Atelectasis, Edema</td></tr>
+      <tr><td><strong>U-Ignore</strong></td><td>NaN (masked)</td><td>Skip in loss computation</td><td>All labels (best practice)</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- ARCHITECTURE                                                              -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div id="panel-pipeline" class="panel">
+  <div class="g2" style="gap:20px">
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="ct">Model Architecture</div>
+        <pre>Input Image (chest X-ray JPEG/PNG)
+        │
+  [scripts/preprocess_chexpert.py]
+  → Resize + normalize → processed CSV
+        │
+  [training/dataset.py]
+  → CheXpertDataset: load JPEG → tensor
+  → ImageNet normalization (mean/std)
+  → Train: augment (flip, rotate, jitter)
+        │
+  [training/train.py]
+  ┌──────────────────────────────────────┐
+  │  ResNet18 (ImageNet pretrained)      │
+  │  → Remove FC layer                  │
+  │  → feature vector (512-dim)         │
+  │  → Linear(512 → 256) + ReLU + Drop  │
+  │  → Linear(256 → 6) [no sigmoid]     │
+  └──────────────────────────────────────┘
+        │  logits (6,)
+  BCEWithLogitsLoss(pos_weight=...)
+  AdamW + CosineAnnealingLR
+        │
+  models/chexpert_model.pth
+        │
+  [model_service/main.py]  FastAPI :8001
+  → sigmoid(logits) → probabilities
+  → threshold (0.4) → positive/negative
+  → report_generator.py → NL report
+  → qa_engine.py → Q&A
+        │
+  [backend/main.py]  FastAPI :8000
+        │
+  [frontend/index.html]  Browser</pre>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="ct">Training Pipeline Steps</div>
+        <div id="pipeSteps"></div>
+      </div>
+      <div class="card">
+        <div class="ct">CPU Training Time Estimates</div>
+        <table>
+          <tr><th>Samples</th><th>Epochs</th><th>Est. Time</th><th>AUC Target</th></tr>
+          <tr><td>500</td><td>5</td><td>~10 min</td><td>~0.65 (demo)</td></tr>
+          <tr><td>5,000</td><td>10</td><td>~2–3 h</td><td>~0.75</td></tr>
+          <tr><td>20,000</td><td>15</td><td>~8–10 h</td><td>~0.82</td></tr>
+          <tr><td>Full 223K</td><td>20</td><td>2–3 days</td><td>~0.87</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- SETUP GUIDE                                                               -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div id="panel-setup" class="panel">
+  <div class="g2" style="gap:20px">
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="ct">Step-by-Step Setup</div>
+        <div id="setupSteps"></div>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="ct">Folder Structure After Setup</div>
+        <pre>medvision/
+├── sample_data/
+│   └── chexpert/
+│       ├── CheXpert-v1.0-small/
+│       │   ├── train/   ← images
+│       │   └── valid/   ← images
+│       ├── train.csv
+│       └── valid.csv
+│   └── processed/
+│       ├── processed_train.csv
+│       ├── processed_valid.csv
+│       └── label_stats.csv
+├── models/
+│   └── chexpert_model.pth  ← saved after training
+├── logs/
+│   ├── training_history.json
+│   ├── training_curves.png
+│   └── roc_curves.png
+├── training/
+│   ├── dataset.py
+│   ├── train.py
+│   └── evaluate.py
+├── model_service/
+│   └── main.py  ← port 8001
+├── backend/
+│   └── main.py  ← port 8000
+└── frontend/
+    └── index.html</pre>
+      </div>
+      <div class="card">
+        <div class="ct">Quick Commands</div>
+        <pre># 1. Install
+pip install -r requirements.txt
+
+# 2a. Download real CheXpert:
+# https://stanfordmlgroup.github.io/competitions/chexpert/
+
+# 2b. OR create test sample:
+python scripts/download_sample.py
+
+# 3. Preprocess
+python scripts/preprocess_chexpert.py \
+  --max_samples 5000 --uncertainty zeros
+
+# 4. Train (CPU, ~2–3 h for 5000 samples)
+python training/train.py \
+  --max_samples 5000 --epochs 10
+
+# 5. Evaluate
+python training/evaluate.py \
+  --model models/chexpert_model.pth
+
+# 6. Start model service (terminal 1)
+cd model_service
+uvicorn main:app --port 8001
+
+# 7. Start backend (terminal 2)
+cd backend
+uvicorn main:app --port 8000
+
+# 8. Open frontend
+open frontend/index.html</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- VIVA GUIDE                                                                -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div id="panel-viva" class="panel">
+  <div class="g2" style="gap:20px">
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="ct">What to Show in Demo</div>
+        <div id="demoSteps"></div>
+      </div>
+      <div class="card">
+        <div class="ct">Report Sections for Major Project</div>
+        <table>
+          <tr><th>Section</th><th>What to include</th></tr>
+          <tr><td>Abstract</td><td>Problem, approach, dataset, results (AUC), contribution</td></tr>
+          <tr><td>Introduction</td><td>Clinical motivation, AI in radiology, project scope</td></tr>
+          <tr><td>Literature Review</td><td>CheXpert paper (Irvin 2019), CheXNet (Rajpurkar 2017), Vision-Language models</td></tr>
+          <tr><td>Dataset</td><td>CheXpert stats, label distribution, preprocessing, uncertainty handling</td></tr>
+          <tr><td>Methodology</td><td>ResNet18 architecture, training config, loss function, evaluation metrics</td></tr>
+          <tr><td>Results</td><td>Per-label AUC table, ROC curves, training curves, example predictions</td></tr>
+          <tr><td>System Design</td><td>Architecture diagram, API endpoints, frontend UI</td></tr>
+          <tr><td>Limitations</td><td>CPU-only, 6 labels, not FDA-approved, synthetic fallback</td></tr>
+          <tr><td>Future Work</td><td>ClinicalBERT, Grad-CAM, full 14 labels, RLHF, DICOM support</td></tr>
+        </table>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="ct">Expected Viva Questions & Answers</div>
+        <div id="vivaQAs"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+  </div><!-- /content -->
+</main>
+</div><!-- /shell -->
+
+<script>
+const BACKEND = 'http://localhost:8000';
+let preds = null, file = null, qaLog = [];
+
+/* ─── Navigation ─── */
+const META = {
+  upload:   {title:'Image Analysis', sub:'Upload a real chest X-ray for AI-powered multi-label classification'},
+  report:   {title:'Diagnostic Report', sub:'Structured NL report generated from model predictions'},
+  qa:       {title:'Clinical Q&A', sub:'Ask clinical questions about the analysed image'},
+  dashboard:{title:'Dashboard', sub:'CheXpert dataset statistics and expected model performance'},
+  pipeline: {title:'System Architecture', sub:'End-to-end pipeline from image to report'},
+  setup:    {title:'Setup Guide', sub:'Step-by-step guide to configure the real CheXpert dataset'},
+  viva:     {title:'Viva & Project Guide', sub:'Demo checklist, report outline, and expected viva Q&A'},
+};
+function go(name, btn) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  if(btn) btn.classList.add('active');
+  const m = META[name]||{};
+  document.getElementById('tb-title').textContent = m.title||name;
+  document.getElementById('tb-sub').textContent = m.sub||'';
+}
+
+/* ─── Health check ─── */
+async function checkHealth() {
+  try {
+    const r = await fetch(BACKEND+'/health', {signal:AbortSignal.timeout(4000)});
+    const d = await r.json();
+    const ok = d.model_service === 'ok';
+    const labels = d.detail?.labels || [];
+    document.getElementById('svcDot').className = 'dot'+(ok?'':' red');
+    document.getElementById('svcText').textContent = ok ? 'Services online' : 'Service offline';
+    document.getElementById('labelInfo').textContent = labels.length ? `Labels: ${labels.join(', ')}` : 'Start model-service first';
+    if(ok) document.getElementById('modelBadge').textContent = `${labels.length} Labels`;
+  } catch {
+    document.getElementById('svcDot').className = 'dot red';
+    document.getElementById('svcText').textContent = 'Services unreachable';
+  }
+}
+checkHealth(); setInterval(checkHealth, 15000);
+
+/* ─── File handling ─── */
+function dragOn(e){e.preventDefault();document.getElementById('dropzone').classList.add('drag')}
+function dragOff(){document.getElementById('dropzone').classList.remove('drag')}
+function onDrop(e){e.preventDefault();dragOff();if(e.dataTransfer.files[0])setFile(e.dataTransfer.files[0])}
+function onFile(e){if(e.target.files[0])setFile(e.target.files[0])}
+
+function setFile(f) {
+  file = f;
+  const z = document.getElementById('dropzone');
+  z.classList.remove('drag'); z.classList.add('ok');
+  document.getElementById('upIcon').textContent = '✅';
+  document.getElementById('upTitle').textContent = f.name;
+  document.getElementById('upSub').textContent = (f.size/1024).toFixed(1)+' KB · '+f.type;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById('imgPreview');
+    img.src = e.target.result; img.style.display = 'block';
+  };
+  reader.readAsDataURL(f);
+  document.getElementById('analyzeBtn').disabled = false;
+}
+
+function clearAll() {
+  file = null; preds = null;
+  const z = document.getElementById('dropzone');
+  z.className = 'upzone';
+  document.getElementById('upIcon').textContent = '📁';
+  document.getElementById('upTitle').textContent = 'Drop image or click to browse';
+  document.getElementById('upSub').textContent = 'Real chest X-ray JPEG / PNG recommended';
+  document.getElementById('imgPreview').style.display = 'none';
+  document.getElementById('analyzeBtn').disabled = true;
+  document.getElementById('loadCard').style.display = 'none';
+  document.getElementById('resCard').style.display = 'none';
+  document.getElementById('queryInput').value = '';
+  document.getElementById('notes').value = '';
+  document.getElementById('fileIn').value = '';
+}
+
+/* ─── Analysis ─── */
+const STEPS = [
+  'Reading image file…',
+  'Preprocessing (resize 224×224, normalize)…',
+  'ResNet18 forward pass (feature extraction)…',
+  'Classification head (6-label sigmoid)…',
+  'Generating diagnostic report…',
+  'Complete ✓'
+];
+
+async function runAnalysis() {
+  if(!file) return;
+  document.getElementById('analyzeBtn').disabled = true;
+  document.getElementById('resCard').style.display = 'none';
+
+  const lc = document.getElementById('loadCard');
+  lc.style.display = 'block';
+  const ls = document.getElementById('loadSteps');
+  const lf = document.getElementById('lfill');
+
+  let si = 0;
+  const iv = setInterval(()=>{
+    if(si>=STEPS.length){clearInterval(iv);return}
+    ls.innerHTML = `<div class="loading-row"><div class="spinner"></div>${STEPS[si]}</div>`;
+    lf.style.width = (si+1)/STEPS.length*100+'%';
+    si++;
+  },500);
+
+  const form = new FormData();
+  form.append('image', file);
+  const q = document.getElementById('queryInput').value.trim();
+  const ctx = document.getElementById('notes').value.trim();
+  if(q) form.append('query', q);
+  if(ctx) form.append('clinical_context', ctx);
+  form.append('include_report','true');
+  if(q) form.append('include_qa','true');
+
+  let data;
+  try {
+    const r = await fetch(BACKEND+'/analyze', {method:'POST', body:form});
+    if(!r.ok) throw new Error(await r.text());
+    data = await r.json();
+  } catch(e) {
+    console.warn('Backend offline — demo mode:', e.message);
+    data = makeDemoData(q);
+  }
+
+  clearInterval(iv);
+  lf.style.width = '100%';
+  ls.innerHTML = `<div class="loading-row" style="color:var(--green)">✅ Analysis complete</div>`;
+  setTimeout(()=>{lc.style.display='none'},900);
+
+  const cls = data.classification || data;
+  preds = cls.predictions || cls.preds || [];
+  showResults(cls);
+  if(data.report) fillReport(data.report);
+  document.getElementById('analyzeBtn').disabled = false;
+
+  // Quick QA buttons
+  const qs = ['Is there pneumonia?','Is this normal?','What are the main findings?','Is there pleural effusion?','What is the most likely diagnosis?'];
+  document.getElementById('quickQs').innerHTML = qs.map(q=>`<button style="padding:4px 9px;border-radius:20px;background:var(--s2);border:1px solid var(--border);color:var(--text);font-size:11px;cursor:pointer" onclick="quickAsk('${q}')">${q}</button>`).join('');
+}
+
+function makeDemoData(q) {
+  const labels = ['Atelectasis','Cardiomegaly','Consolidation','Edema','Pleural Effusion','Pneumonia'];
+  const probs = [0.71, 0.42, 0.28, 0.83, 0.61, 0.38];
+  const ps = labels.map((l,i)=>({label:l,probability:probs[i],confidence_pct:Math.round(probs[i]*100),positive:probs[i]>=0.4,severity:probs[i]>=0.75?'high':probs[i]>=0.5?'moderate':probs[i]>=0.4?'low':'negative'}));
+  ps.sort((a,b)=>b.probability-a.probability);
+  const pos = ps.filter(p=>p.positive).map(p=>p.label);
+  return {
+    classification:{predictions:ps,positive_findings:pos,any_finding:pos.length>0,inference_time_ms:3241,model_version:'MedVision-CheXpert-resnet18-v2.0 (demo)'},
+    report:{status:'success',positive_findings:pos,report:{indication:q||'Shortness of breath',technique:'CXR PA view. AI analysis with ResNet18 trained on CheXpert (demo mode — start model-service for real inference).',findings:'Atelectasis (71%): Moderate subsegmental atelectasis noted.\nEdema (83%): Perihilar haziness with bilateral vascular congestion.\nPleural Effusion (61%): Moderate right pleural effusion.',impression:'1. Pulmonary Edema (83%)\n2. Atelectasis (71%)\n3. Pleural Effusion (61%)\nClinical correlation recommended.',recommendations:'• Edema: Diuretics, BNP, echocardiography\n• Atelectasis: Physiotherapy, incentive spirometry\n• ⚠️ Demo mode — start model-service for real inference',disclaimer:'DEMO MODE — Start model-service (port 8001) for real CheXpert inference.'},report_text:'[DEMO] MedVision Report — Start model-service for real output'}
+  };
+}
+
+function showResults(cls) {
+  const pos = cls.positive_findings || [];
+  const badge = document.getElementById('resBadge');
+  if(!cls.any_finding){badge.className='badge b-green';badge.textContent='Normal'}
+  else if(pos.length<=2){badge.className='badge b-yellow';badge.textContent=pos.length+' Finding(s)'}
+  else{badge.className='badge b-red';badge.textContent=pos.length+' Abnormalities'}
+
+  const list = document.getElementById('findingList');
+  list.innerHTML = (cls.predictions||[]).map(p=>{
+    const c = p.probability>=0.75?'var(--red)':p.probability>=0.4?'var(--yellow)':'var(--green)';
+    const dc = p.positive?'var(--red)':'var(--border2)';
+    const sev = p.severity||'';
+    return `<div class="finding-row">
+      <div class="f-dot" style="background:${dc}"></div>
+      <div class="f-label">
+        <div class="f-name">${p.label}</div>
+        <div class="f-sub">${p.positive?'✓ Detected · '+sev+' severity':'Not detected'}</div>
+      </div>
+      <div class="conf-wrap">
+        <div class="conf-bar"><div class="conf-fill" style="width:${p.confidence_pct}%;background:${c}"></div></div>
+        <span class="conf-pct" style="color:${c}">${p.confidence_pct}%</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('metaRow').textContent =
+    `Model: ${cls.model_version||'MedVision'} · Time: ${(cls.inference_time_ms||0).toFixed(0)}ms · Threshold: ${cls.threshold||0.4} · Positives: ${pos.length}/6`;
+
+  document.getElementById('resCard').style.display = 'block';
+}
+
+function fillReport(rd) {
+  const r = rd.report || {};
+  const set = (id,v) => { const el=document.getElementById(id); if(el)el.textContent=v||'—'; };
+  set('rep-ind', r.indication||r.clinical_context);
+  set('rep-tech', r.technique);
+  set('rep-find', r.findings);
+  set('rep-imp', r.impression);
+  set('rep-rec', r.recommendations);
+  document.getElementById('rawReport').textContent = rd.report_text || JSON.stringify(r, null, 2);
+
+  // ICD-10
+  const ICD = {Atelectasis:'J98.11',Cardiomegaly:'I51.7',Consolidation:'J18.9',Edema:'J81.1','Pleural Effusion':'J90',Pneumonia:'J18.9'};
+  const pos = rd.positive_findings || [];
+  document.getElementById('icdCodes').innerHTML = pos.length
+    ? pos.map(n=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px"><span>${n}</span><code style="color:var(--blue);font-size:12px">${ICD[n]||'—'}</code></div>`).join('')
+    : '<div style="color:var(--green);font-size:13px">No significant findings — no codes applicable.</div>';
+}
+
+/* ─── Chat ─── */
+function quickAsk(q) { document.getElementById('chatIn').value = q; sendChat(); go('qa'); }
+
+function sendChat() {
+  const inp = document.getElementById('chatIn');
+  const q = inp.value.trim(); if(!q) return;
+  inp.value = '';
+  addMsg(q,'user');
+  if(!preds){addMsg('Please upload and analyse a chest X-ray image first.','ai');return;}
+  setTimeout(()=>addMsg(localQA(q),'ai'), 350);
+}
+
+function localQA(q) {
+  const ql = q.toLowerCase();
+  const pos = (preds||[]).filter(p=>p.positive);
+  const lkp = Object.fromEntries((preds||[]).map(p=>[p.label.toLowerCase(),p]));
+  const CONDS = {pneumonia:['pneumonia'],effusion:['pleural effusion'],edema:['edema','oedema'],cardiomegaly:['cardiomegaly'],atelectasis:['atelectasis'],consolidation:['consolidation']};
+
+  if(ql.includes('normal')||ql.includes('clear')||ql.includes('healthy'))
+    return pos.length===0 ? 'The AI found NO significant abnormalities. The chest X-ray appears within normal limits. Always verify with a radiologist.'
+      : `NOT normal — ${pos.length} finding(s): ${pos.map(p=>p.label).join(', ')}.`;
+
+  for(const [kw,labels] of Object.entries(CONDS)) {
+    if(ql.includes(kw)) {
+      const match = (preds||[]).find(p=>labels.includes(p.label.toLowerCase()));
+      if(match) return match.positive
+        ? `YES — ${match.label} detected with ${match.confidence_pct}% confidence (${match.severity} severity). Clinical correlation recommended.`
+        : `NO — ${match.label} not detected (${match.confidence_pct}%, below threshold).`;
+    }
+  }
+  if(ql.includes('most likely')||ql.includes('primary')||ql.includes('diagnosis')) {
+    if(!pos.length) return 'No significant findings detected.';
+    const top = pos[0]; return `Most likely: ${top.label} (${top.confidence_pct}%, ${top.severity} severity).${pos.length>1?' Other findings: '+pos.slice(1).map(p=>p.label).join(', ')+'.':''}`;
+  }
+  if(ql.includes('list')||ql.includes('all')||ql.includes('findings')||ql.includes('what'))
+    return pos.length ? `Detected (${pos.length}):\n`+pos.map(p=>`• ${p.label} — ${p.confidence_pct}%`).join('\n')
+      : 'No significant conditions detected.';
+  return pos.length ? `Detected: ${pos.map(p=>p.label).join(', ')}. Ask about a specific condition for more detail.`
+    : 'No significant findings detected. The study appears normal.';
+}
+
+function addMsg(txt,role){
+  const c=document.getElementById('chatMsgs');
+  const d=document.createElement('div'); d.className=`msg msg-${role==='user'?'u':'a'}`;
+  d.innerHTML=`<div class="msg-from">${role==='user'?'You':'MedVision AI'}</div>${txt.replace(/\n/g,'<br>')}`;
+  c.appendChild(d); c.scrollTop=c.scrollHeight;
+  qaLog.unshift({q:role==='user'?txt:'',a:role==='ai'?txt:'',t:new Date().toLocaleTimeString()});
+  if(role==='ai') renderQAHist();
+}
+
+function renderQAHist() {
+  const el = document.getElementById('qaHist');
+  const pairs = [];
+  for(let i=0;i<qaLog.length-1;i+=2) pairs.push({q:qaLog[i+1]?.q||'',a:qaLog[i]?.a||'',t:qaLog[i]?.t||''});
+  if(!pairs.length){el.innerHTML='<div style="font-size:13px;color:var(--muted)">No questions yet.</div>';return;}
+  el.innerHTML = pairs.map(p=>`<div style="padding:10px;border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px"><div style="font-size:12px;color:var(--blue);margin-bottom:4px">Q: ${p.q}</div><div style="font-size:12px;color:var(--text);line-height:1.5">A: ${p.a}</div><div style="font-size:10px;color:var(--muted2);margin-top:4px">${p.t}</div></div>`).join('');
+}
+
+/* ─── Dashboard data ─── */
+const STATS = [
+  {l:'Atelectasis',prev:'29.0%',auc:'0.818'},
+  {l:'Cardiomegaly',prev:'8.7%',auc:'0.831'},
+  {l:'Consolidation',prev:'9.5%',auc:'0.899'},
+  {l:'Edema',prev:'11.2%',auc:'0.924'},
+  {l:'Pleural Effusion',prev:'14.8%',auc:'0.931'},
+  {l:'Pneumonia',prev:'6.1%',auc:'0.768'},
+];
+document.getElementById('aucBars').innerHTML = STATS.map(s=>`
+  <div style="margin-bottom:9px">
+    <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px"><span style="color:var(--muted)">${s.l}</span><span style="font-weight:500">${s.auc}</span></div>
+    <div style="height:5px;border-radius:3px;background:var(--border)"><div style="height:100%;width:${s.auc*100}%;border-radius:3px;background:var(--blue)"></div></div>
+  </div>`).join('');
+document.getElementById('statTable').innerHTML = STATS.map(s=>`<tr><td>${s.l}</td><td style="color:var(--muted)">${s.prev}</td><td><span class="badge b-blue">${s.auc}</span></td></tr>`).join('');
+
+/* ─── Pipeline steps ─── */
+const PIPE = [
+  {t:'Download CheXpert',d:'Get CheXpert-v1.0-small from Stanford or Kaggle (~11 GB)'},
+  {t:'Preprocess CSV',d:'preprocess_chexpert.py: filter frontal views, handle -1, write processed_train.csv'},
+  {t:'Load Dataset',d:'CheXpertDataset reads CSV, loads JPEG from disk, applies ImageNet normalization'},
+  {t:'Train ResNet18',d:'BCEWithLogitsLoss + pos_weight, AdamW, cosine LR schedule, early stopping'},
+  {t:'Evaluate',d:'Per-label AUC, F1, sensitivity, specificity; ROC curves saved to logs/'},
+  {t:'Model Service',d:'FastAPI loads chexpert_model.pth, exposes /predict /report /qa on port 8001'},
+  {t:'Backend Gateway',d:'FastAPI proxy on port 8000 validates files and routes to model service'},
+  {t:'Frontend',d:'index.html: upload image, display predictions, view report, ask questions'},
+];
+document.getElementById('pipeSteps').innerHTML = PIPE.map((s,i)=>`
+  <div class="step">
+    <div class="step-n">${i+1}</div>
+    <div><div class="step-title">${s.t}</div><div class="step-desc">${s.d}</div></div>
+  </div>`).join('');
+
+/* ─── Setup steps ─── */
+const SETUP = [
+  {t:'Install dependencies',d:'pip install -r requirements.txt'},
+  {t:'Download CheXpert',d:'Register at stanfordmlgroup.github.io → download CheXpert-v1.0-small.zip → extract to sample_data/chexpert/'},
+  {t:'(OR) Generate test sample',d:'python scripts/download_sample.py — creates 200 synthetic images for pipeline testing'},
+  {t:'Preprocess dataset',d:'python scripts/preprocess_chexpert.py --max_samples 5000 --uncertainty zeros'},
+  {t:'Train the model',d:'python training/train.py --max_samples 5000 --epochs 10 (leave overnight for full data)'},
+  {t:'Evaluate',d:'python training/evaluate.py --model models/chexpert_model.pth — see AUC, F1, ROC curves'},
+  {t:'Start model service',d:'cd model_service && uvicorn main:app --port 8001 (Terminal 1)'},
+  {t:'Start backend',d:'cd backend && uvicorn main:app --port 8000 (Terminal 2)'},
+  {t:'Open frontend',d:'Open frontend/index.html in browser → upload real chest X-ray → see predictions'},
+];
+document.getElementById('setupSteps').innerHTML = SETUP.map((s,i)=>`
+  <div class="step">
+    <div class="step-n">${i+1}</div>
+    <div><div class="step-title">${s.t}</div><div class="step-desc">${s.d}</div></div>
+  </div>`).join('');
+
+/* ─── Viva content ─── */
+// const DEMO = [
+//   {t:'Show live upload',d:'Upload a real frontal chest X-ray (PA view) downloaded from a public source'},
+//   {t:'Show classification',d:'Point to each label, explain confidence score and threshold (0.4)'},
+//   {t:'Show report',d:'Navigate to Diagnostic Report — explain each section (indication, findings, impression)'},
+//   {t:'Show Q&A',d:'Type "Is there pneumonia?" and explain how the QA engine works'},
+//   {t:'Show architecture',d:'Walk through the pipeline diagram — ResNet18 → classifier → API → frontend'},
+//   {t:'Show training curves',d:'Open logs/training_curves.png — explain loss convergence and AUC improvement'},
+//   {t:'Show ROC curves',d:'Open logs/roc_curves.png — explain AUC interpretation and per-label performance'},
+// ];
+// document.getElementById('demoSteps').innerHTML = DEMO.map((s,i)=>`
+//   <div class="step">
+//     <div class="step-n">${i+1}</div>
+//     <div><div class="step-title">${s.t}</div><div class="step-desc">${s.d}</div></div>
+//   </div>`).join('');
+
+// const VIVAS = [
+//   {q:'Why ResNet18 and not a larger model?',a:'ResNet18 has 11.7M parameters and runs on CPU in 1–4 seconds. Larger models (ResNet50, ViT) need GPU and would be impractical for a laptop demo. ImageNet pretrained features transfer well to chest X-rays as both involve visual texture patterns.'},
+//   {q:'Why BCEWithLogitsLoss and not CrossEntropyLoss?',a:'CXR diseases co-occur — a patient can have both pneumonia AND pleural effusion simultaneously. CrossEntropyLoss forces mutual exclusivity (softmax). BCEWithLogitsLoss applies independent sigmoid per label, allowing multi-label output.'},
+//   {q:'How do you handle the -1 uncertainty labels in CheXpert?',a:'We use U-Zeros strategy (map -1 → 0) by default — conservative and widely used. U-Ones (→1) and U-Ignore (mask from loss) are also implemented. The CheXpert paper found U-Ones improves AUC for Atelectasis and Edema.'},
+//   {q:'Why AUC and not just accuracy?',a:'Class imbalance: Pneumonia is only 6.1% prevalent. A model predicting "no pneumonia" always gets 93.9% accuracy but is useless. AUC measures ranking quality regardless of threshold — a model with AUC 0.85 correctly ranks 85% of sick patients above healthy ones.'},
+//   {q:'What is pos_weight in the loss function?',a:'pos_weight[i] = n_negative[i] / n_positive[i] tells the loss to weight positive examples more heavily. For Pneumonia with 6% prevalence, pos_weight ≈ 15.7, so the model learns to be more sensitive to rare positives.'},
+//   {q:'Is this system clinically safe?',a:'No — this is a research/educational system. It has not been validated on prospective clinical data, not approved by FDA/CE, and not tested for bias across demographics. Any clinical use would require rigorous clinical trials, regulatory approval, and radiologist oversight.'},
+//   {q:'What is the difference between sensitivity and specificity?',a:'Sensitivity (recall) = TP/(TP+FN) — fraction of actual sick patients correctly detected. Specificity = TN/(TN+FP) — fraction of healthy patients correctly cleared. In medicine, high sensitivity is preferred (miss fewer sick patients) at the cost of more false positives.'},
+// ];
+// document.getElementById('vivaQAs').innerHTML = VIVAS.map((v,i)=>`
+//   <div style="margin-bottom:14px;padding:13px;border:1px solid var(--border);border-radius:var(--r)">
+//     <div style="font-size:12px;color:var(--blue);font-weight:500;margin-bottom:6px">Q${i+1}: ${v.q}</div>
+//     <div style="font-size:12px;color:var(--text);line-height:1.6">${v.a}</div>
+//   </div>`).join('');
+</script>
+</body>
+</html>
