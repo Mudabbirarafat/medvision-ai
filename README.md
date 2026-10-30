@@ -1,5 +1,7 @@
 # 🏥 MedVision AI
 
+[![CI](https://github.com/Mudabbirarafat/medvision-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/Mudabbirarafat/medvision-ai/actions/workflows/ci.yml)
+
 An AI-powered Medical Imaging and Diagnostic Assistant that leverages Deep Learning, Computer Vision, and Multimodal AI techniques to assist in chest X-ray analysis, report generation, and clinical decision support.
 
 ## 🚀 Overview
