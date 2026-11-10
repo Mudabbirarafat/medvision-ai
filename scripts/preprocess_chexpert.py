@@ -87,13 +87,31 @@ def find_csv_and_root(chexpert_dir: Path):
     )
 
 
-def apply_uncertainty(value: float, strategy: str) -> float:
+UNCERTAINTY_STRATEGIES = ("zeros", "ones", "ignore")
+
+
+def apply_uncertainty_strategy(value: float, strategy: str) -> float:
+    """Resolve CheXpert's -1 "uncertain" label according to `strategy`.
+
+    The strategy is validated before anything else. It used to fall through:
+    an unrecognised name left a -1 in place and the run carried on, so a typo
+    in --uncertainty trained the model on uncertainty labels as if they were
+    a third class. argparse guards the CLI, but nothing guarded the function,
+    and this is the only place that knows -1 is special.
+    """
+    if strategy not in UNCERTAINTY_STRATEGIES:
+        raise ValueError(
+            f"unknown uncertainty strategy {strategy!r}; "
+            f"expected one of {', '.join(UNCERTAINTY_STRATEGIES)}"
+        )
     if pd.isna(value):
         return 0.0
     if value == -1.0:
-        if strategy == "zeros":  return 0.0
-        if strategy == "ones":   return 1.0
-        if strategy == "ignore": return float("nan")
+        if strategy == "zeros":
+            return 0.0
+        if strategy == "ones":
+            return 1.0
+        return float("nan")  # "ignore": dropped by the masked loss
     return float(value)
 
 
@@ -161,7 +179,7 @@ def process_split(csv_path, image_root, split_name, strategy,
             "view": str(row.get("Frontal/Lateral", "Frontal")),
         }
         for label, col in zip(SELECTED_LABELS, LABEL_COLS):
-            rec[col] = apply_uncertainty(row.get(label, float("nan")), strategy)
+            rec[col] = apply_uncertainty_strategy(row.get(label, float("nan")), strategy)
         records.append(rec)
 
     result = pd.DataFrame(records)
@@ -196,7 +214,7 @@ def main():
     parser = argparse.ArgumentParser(description="Preprocess CheXpert (fixed version)")
     parser.add_argument("--chexpert_dir",  default=str(CHEXPERT_DIR))
     parser.add_argument("--output_dir",    default=str(PROCESSED_DIR))
-    parser.add_argument("--uncertainty",   default="zeros", choices=["zeros","ones","ignore"])
+    parser.add_argument("--uncertainty",   default="zeros", choices=list(UNCERTAINTY_STRATEGIES))
     parser.add_argument("--max_samples",   type=int, default=None,
                         help="Max training samples. Use 5000 for quick demo.")
     parser.add_argument("--max_val",       type=int, default=None)
