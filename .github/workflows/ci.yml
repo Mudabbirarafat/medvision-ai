@@ -16,32 +16,45 @@ jobs:
           python-version: '3.12'
           cache: pip
 
-      # Non-blocking on purpose: several of these projects pin heavy ML wheels
-      # that fail on a clean runner. A red badge for an unrelated dependency
-      # issue is worse than no badge, so this warns instead of failing.
+      # Blocking, and small enough to be blocking.
+      #
+      # The step that used to be here warned instead of failing, because the
+      # default torch wheel carries a CUDA runtime - about 2.5 GB of download
+      # for a runner with no GPU, which is slow and occasionally runs a job
+      # out of disk. The CPU index solves that properly rather than hiding it:
+      # the wheels are a fraction of the size, nothing in this repo asks for a
+      # GPU, and with the install reliable there is no longer a reason to let
+      # it fail quietly.
+      #
+      # torch and torchvision come from the CPU index first so that
+      # requirements.txt finds them already satisfied.
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then
-            pip install -r requirements.txt || echo "::warning::dependency install failed"
-          else
-            echo "::notice::no requirements.txt"
-          fi
+          pip install --index-url https://download.pytorch.org/whl/cpu torch torchvision
+          pip install -r requirements.txt
+          python -c "import torch; print('torch', torch.__version__, '| cuda build:', torch.version.cuda)"
 
-      # This is the real gate: every source file must parse.
       - name: Byte-compile all sources
         run: python -m compileall -q .
 
+      # Non-blocking, deliberately, and unlike the steps around it: style
+      # findings are annotated on the diff and should not stop a merge.
       - name: Lint
         run: |
           pip install ruff
           ruff check --output-format=github . || echo "::warning::ruff reported issues"
 
+      # This step used to be guarded by
+      #   if ls test_*.py tests/ **/test_*.py >/dev/null 2>&1
+      # and `ls` exits non-zero when any argument is missing. There is no
+      # test_*.py at the repo root, so the guard was always false, the step
+      # printed "no tests found" on every run, and tests/test_system.py - 42
+      # tests across the dataset, model, loss, training step, checkpointing,
+      # report generator and QA engine - had never run once in CI.
+      #
+      # Nine of them are skipped without the processed CheXpert CSVs, which
+      # are not in the repo and should not be. The other 33 need nothing but
+      # the dependencies above.
       - name: Tests
-        run: |
-          pip install pytest
-          if ls test_*.py tests/ **/test_*.py >/dev/null 2>&1; then
-            pytest -q
-          else
-            echo "::notice::no tests found"
-          fi
+        run: pytest -q
